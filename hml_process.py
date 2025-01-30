@@ -5,6 +5,9 @@ import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MaxNLocator
 
+from units import MetricUnit
+
+
 class BenchmarkProcessor:
     def __init__(self, input_hml: str):
         self.input_hml = input_hml
@@ -43,6 +46,8 @@ class BenchmarkProcessor:
     def create_benchmark_df(self, data: list, headers: list):
         df = pd.DataFrame(data, columns=["Timestamp"] + headers)
         df["Timestamp"] = self.convert_timestamps(df["Timestamp"])
+        for col in headers:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
         return df
 
     def convert_timestamps(self, timestamps):
@@ -53,15 +58,19 @@ class BenchmarkProcessor:
     def draw_plot(self, df, metrics: list, title: str, output_pdf: PdfPages):
         plt.figure(figsize=(10, 6))
         ax = plt.gca()
+
         for metric in metrics:
             if metric in df.columns:
                 sns.lineplot(x=df["Timestamp"], y=df[metric], label=metric, ax=ax)
+
         ax.set_xlabel("Time (seconds)")
-        ax.set_ylabel(title)
+        unit = MetricUnit.get_unit(title)
+        y_label = f"{title} ({unit})" if unit else title
+
+        ax.set_ylabel(y_label)
         ax.set_title(f"{title} over time")
         ax.legend()
         ax.yaxis.set_major_locator(MaxNLocator(6))
-        plt.tight_layout()
         output_pdf.savefig()
         plt.close()
 
